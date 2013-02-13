@@ -1,0 +1,158 @@
+[comment]
+/*******************************************************************************
+ * Copyright (c) 2013 Axellience.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Axellience - initial API and implementation
+ *******************************************************************************
+/[/comment]
+
+[comment encoding = UTF-8 /]
+[module umlcommon('http://www.eclipse.org/uml2/3.0.0/UML')/]
+
+[template public path (n : NamedElement)]
+[n.qualifiedName.replaceAll('::', '/').replaceAll('\\.','/')/]
+[/template]
+
+[template public fullName (n : NamedElement)]
+[n.qualifiedName.replaceAll('::', '.')/]
+[/template]
+
+[comment Gestion des types/]
+[comment template public getDeclarativeType(p : TypedElement) ? (not oclIsKindOf(MultiplicityElement)) post (trim())
+[p.type.jname()/
+[/template/]
+
+[template public getDeclarativeType(p : MultiplicityElement) ? (lower = 1 and lower = upper and oclIsKindOf(TypedElement)) post (trim())]
+[p.oclAsType(TypedElement).type.primitiveJname()/]
+[/template]
+
+[template public getDeclarativeType(p : MultiplicityElement) ? (lower = 0 and upper = 1 and oclIsKindOf(TypedElement)) post (trim())]
+[p.oclAsType(TypedElement).type.jname()/]
+[/template]
+
+[template public getDeclarativeType(p : MultiplicityElement) ? (isMany() and isUnique and oclIsKindOf(TypedElement)) post (trim())]
+Set<[p.oclAsType(TypedElement).type.jname()/]>
+[/template]
+
+[template public getDeclarativeType(p : MultiplicityElement) ? (isMany() and not isUnique and oclIsKindOf(TypedElement)) post (trim())]
+List<[p.oclAsType(TypedElement).type.jname()/]>
+[/template]
+
+[comment]
+[template public getConcreteType(p : MultiplicityElement) ? (lower = 1 and lower = upper and oclIsKindOf(TypedElement)) post (trim())]
+[p.oclAsType(TypedElement).type.primitiveJname()/]
+[/template]
+
+[template public getConcreteType(p : MultiplicityElement) ? (lower = 0 and upper = 1 and oclIsKindOf(TypedElement)) post (trim())]
+[p.oclAsType(TypedElement).type.jname()/]
+[/template]
+[/comment]
+
+[template public getConcreteType(p : MultiplicityElement) ? (isMany() and isUnique and oclIsKindOf(TypedElement)) post (trim())]
+[if (p.isOrdered)]Linked[/if]HashSet<[p.oclAsType(TypedElement).type.jname()/]>
+[/template]
+
+[template public getConcreteType(p : MultiplicityElement) ? (isMany() and not isUnique and oclIsKindOf(TypedElement)) post (trim())]
+LinkedList<[p.oclAsType(TypedElement).type.jname()/]>
+[/template]
+
+[template public primitiveJname(t : Type) ? (t <> null) post(trim())]
+[if (t.name = 'UnlimitedNatural')]long
+[elseif (t.name = 'Integer')]int
+[elseif (t.name = 'Boolean')]boolean
+[elseif (t.name = 'Double')]double
+[elseif (t.name = 'Real')]double
+[elseif (t.name = 'Short')]short
+[elseif (t.name = 'Long')]long
+[elseif (t.name = 'Float')]float
+[elseif (t.name = 'Byte')]byte
+[elseif (t.name = 'ByteArray')]byte['[]'/]
+[elseif (t.name = 'Date')]Date
+[else][t.name/]
+[/if]
+[/template]
+
+[template public jname(t : Type) ? (t <> null) post(trim())]
+[if (t.name = 'UnlimitedNatural')]Long
+[elseif (t.name = 'Real')]Double
+[elseif (t.name = 'ByteArray')]Byte['[]'/]
+[else][t.name/]
+[/if]
+[/template]
+
+[comment Gère les valeurs par défaut/]
+[template public defaultValue(v : MultiplicityElement) ? (isMany() or lower = 0)  post (trim())]
+null
+[/template]
+
+[template public defaultValue(v : MultiplicityElement) ? (lower = 1 and upper = 1 and oclIsKindOf(Parameter)) post (trim())]
+[if (v.oclAsType(Parameter).defaultValue.oclIsUndefined())]
+[v.oclAsType(Parameter).defaultSingleValue()/]
+[else]
+[if (v.oclAsType(Parameter).type.oclIsKindOf(Enumeration))][v.oclAsType(Parameter).type.jname()/].[v.oclAsType(Parameter).defaultValue/]
+[else][v.oclAsType(Parameter).defaultValue/]
+[/if]
+[/if]
+[/template]
+
+[template public defaultValue(v : MultiplicityElement) ? (lower = 1 and upper = 1 and oclIsKindOf(Property)) post (trim())]
+[if (v.oclAsType(Property).defaultValue.oclIsUndefined())]
+[v.oclAsType(Property).defaultSingleValue()/]
+[else]
+[if (v.oclAsType(Property).type.oclIsKindOf(Enumeration))][v.oclAsType(Property).type.jname()/].[v.oclAsType(Property).defaultValue/]
+[else][v.oclAsType(Property).defaultValue/]
+[/if]
+[/if]
+[/template]
+
+[template public defaultSingleValue(t : TypedElement) ? (t.type <> null) post (trim())]
+[if (t.type.name = 'String')]""
+[elseif (t.type.name = 'UnlimitedNatural')]0L
+[elseif (t.type.name = 'Double')]0.0
+[elseif (t.type.name = 'Real')]0.0
+[elseif (t.type.name = 'Float')]0.0
+[elseif (t.type.name = 'Long')]0L
+[elseif (t.type.name = 'Integer')]0
+[elseif (t.type.name = 'Short')]0
+[elseif (t.type.name = 'Byte')]0x0
+[elseif (t.type.name = 'ByteArray')]new byte['['/]32]
+[elseif (t.type.name = 'Boolean')]false
+[elseif (t.type.name = 'Date')]new Date()
+[elseif (t.type.oclIsKindOf(Enumeration))][t.enumDefaultSingleValue()/]
+[elseif (t.type.oclIsKindOf(Classifier) and t.type.oclAsType(Classifier).isAbstract)]null
+[else]new [t.type.jname()/]()
+[/if]
+[/template]
+
+[template public enumDefaultSingleValue(t : TypedElement) post (trim())]
+[if (not t.type.oclAsType(Enumeration).ownedLiteral->isEmpty())]
+[t.type.jname()/].[t.type.oclAsType(Enumeration).ownedLiteral->at(1).name/]
+[else]
+null
+[/if]
+[/template]
+
+[template public getVisibility(e : NamedElement) ? (e.visibility <> null and oclIsKindOf(Classifier)) post (replace('\n',''))]
+[if (e.visibility = VisibilityKind::_public)] 
+[e.visibility/] 
+[/if]
+[/template]
+
+[template public getVisibility(e : NamedElement) ? (e.visibility <> null and not oclIsKindOf(Classifier)) post (replace('\n',''))]
+[if (e.visibility <> VisibilityKind::_package)]
+[e.visibility/] 
+[/if]
+[/template]
+
+[query public isMany(s : MultiplicityElement) : Boolean =
+	s.lower > 1 or s.upper = -1 or s.upper > 1 
+/]
+
+[query public isAssociation(p : Property) : Boolean =
+	not p.association.oclIsUndefined()
+/]

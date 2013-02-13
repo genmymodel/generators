@@ -1,0 +1,194 @@
+[comment]
+/*******************************************************************************
+ * Copyright (c) 2013 Axellience.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Axellience - initial API and implementation
+ *******************************************************************************
+/[/comment]
+[module uml2roo('http://www.eclipse.org/uml2/3.0.0/UML')]
+
+[import com::genmymodel::generator::uml2springroo::codegen::umlcommon/]
+
+[template public generate(m : Package)]
+[comment @main/]
+[generateSetup()/]
+[generateEntities()/]
+[generateWeb()/]
+[comment clouddeployconf()/]
+[/template]
+
+[template public generateSetup(m : Package)]
+[file ('setup.roo', false, 'UTF-8')]
+project --topLevelPackage [m.fullName().replace('-','')/] --projectName [m.name/]
+
+jpa setup --provider HIBERNATE --database HYPERSONIC_IN_MEMORY
+
+logging setup --level INFO
+
+# [protected ('for setup')]
+
+# [/protected] for setup
+
+[/file]
+[/template]
+
+[template public generateEntities(m : Package)]
+[file ('entities.roo', false, 'UTF-8')]
+
+# Entities and attributes
+[m.eAllContents(Enumeration).gen()/]
+[m.eAllContents(Class).gen()/]
+
+# [protected ('for entities and atributes')]
+
+# [/protected]
+
+# References (relations between entities)
+[m.eAllContents(Class).referencegen()/]
+
+# [protected ('for references')]
+
+# [/protected] for references
+
+[/file]
+[/template]
+
+[template public generateWeb(p : Package)]
+[file ('webmvc.roo', false, 'UTF-8')]
+
+web mvc setup
+web mvc all --package ~.web
+web mvc finder all
+
+web mvc language --code en
+
+#perform tests
+#perform eclipse
+# [protected ('for webmvc')]
+
+# [/protected] for webmvc
+[/file]
+[/template]
+
+[template public gen(cl : Class)]
+entity jpa --class ~.domain.[cl.name/] [if (cl.isAbstract)]--abstract[/if] --sequenceName [cl.name.toUpper()/]_SEQ[if (cl.superClass->notEmpty())] --extends ~.domain.[cl.superClass->asSequence() -> first().name/][/if]
+	[cl.attribute.gen()/]
+
+[/template]
+
+[template public referencegen(cl : Class)]
+[cl.attribute.reference()/]
+[/template]
+
+[template public gen(att : Property) ? (not att.isAssociation())]
+field [att.type.typeKind()/] --fieldName [att.name/][att.type.fieldType()/][if (att.lower > 0)] --notNull[/if]
+
+[/template]
+
+[template public reference(ref : Property) ? (ref.isAssociation() and upper = 1 and (ref.isComposite or isOppositeOne())) ]
+field reference --fieldName [ref.name/] --type [ref.type.name/] --class  ~.domain.[ref.owner.oclAsType(Class).name/] --cardinality ONE_TO_ONE
+
+[/template]
+
+[template public reference(ref : Property) ? (ref.isAssociation() and upper = 1 and not ref.isComposite and not isOppositeOne()) ]
+field reference --fieldName [ref.name/] --type [ref.type.name/] --class  ~.domain.[ref.owner.oclAsType(Class).name/] --cardinality MANY_TO_ONE
+
+[/template]
+
+[template public reference(ref : Property) ? (ref.isAssociation() and isMany() and (isComposite or isOppositeOne()) ) ]
+field set --fieldName [ref.name/] --type [ref.type.name/] --class  ~.domain.[ref.owner.oclAsType(Class).name/] --cardinality ONE_TO_MANY
+
+[/template]
+
+[template public reference(ref : Property) ? (ref.isAssociation() and isMany() and not isComposite and not isOppositeOne()) ]
+field set --fieldName [ref.name/] --type [ref.type.name/] --class  ~.domain.[ref.owner.oclAsType(Class).name/] --cardinality MANY_TO_MANY
+
+[/template]
+
+[template public cardinality(p : Property) ? (p.isAssociation())]
+[if p.isMany() ]
+--cardinality MANY_TO_ONE
+[else]
+--cardinality ONE_TO_ONE
+[/if]
+[/template]
+
+[template public gen(enum : Enumeration)]
+enum type --class ~.domain.[enum.name/]
+	[enum.ownedLiteral.gen()/]
+
+[/template]
+
+[template public gen(el : EnumerationLiteral)]
+enum constant --name [el.name/]
+
+[/template]
+
+[template public typeKind(t : Type) post (replaceAll('\n', '').trim())]
+[if (t.name = 'UnlimitedNatural')]long
+[elseif (t.name = 'String')]string
+[elseif (t.name = 'Integer')]number
+[elseif (t.name = 'Boolean')]boolean
+[elseif (t.name = 'Short')]number
+[elseif (t.name = 'Long')]number
+[elseif (t.name = 'Float')]number
+[elseif (t.name = 'Real')]number
+[elseif (t.name = 'Byte')]byte
+[elseif (t.name = 'ByteArray')]other
+[elseif (t.name = 'Date')]date
+[elseif (t.oclIsKindOf(Enumeration))]
+enum
+[else]
+other
+[/if]
+[/template]
+
+[template public fieldType(t : Type) post (replaceAll('\n', ''))]
+[if (t.name = 'String')]
+[elseif (t.oclIsKindOf(Enumeration))]
+ --type ~.domain.[t.name/]
+[elseif (t.name = 'UnlimitedNatural')]
+ --type java.lang.Long --primitive
+[elseif (t.name = 'Integer')]
+ --type java.lang.Integer --primitive
+[elseif (t.name = 'Short')]
+ --type java.lang.Short --primitive
+[elseif (t.name = 'Long')]
+ --type java.lang.Long --primitive
+[elseif (t.name = 'Float')]
+ --type java.lang.Float --primitive
+[elseif (t.name = 'Int')]
+ --type java.lang.Integer --primitive
+[elseif (t.name = 'Double')]
+ --type java.lang.Double --primitive
+[elseif (t.name = 'Date')]
+ --type java.util.Date
+[elseif (t.name = 'Float')]
+ --type java.lang.Float --primitive
+[elseif (t.name = 'Real')]
+ --type java.lang.Double --primitive
+[elseif (t.name = 'Boolean')]
+ --primitive
+[elseif (t.name = 'ByteArray')]
+ --type java.lang.Byte
+[else]
+ --type [t.name/] 
+[/if]
+[/template]
+
+[query public isByteArray(p : Property) : Boolean =
+	p.type.name = 'ByteArray'
+/]
+
+[query public isManyToMany(p : Property) : Boolean = 
+					not p.getOpposite().oclIsUndefined() and p.isMany() and p.getOpposite().isMany()
+/]
+
+[query public isOppositeOne(p : Property) : Boolean = 
+					not p.getOpposite().oclIsUndefined() and not p.getOpposite().isMany()
+/]
